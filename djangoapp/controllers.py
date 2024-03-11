@@ -20,16 +20,13 @@ def get_medicines(request):
     serializer = MedicineSerializer(result_page, many=True)
     return paginator.get_paginated_response(serializer.data)
 
-
-
-
 #filters for medicines
 
 @api_view(['GET'])
 def filter_medicines(request):
-    print(request.META.get('HTTP_ORIGIN'))
-    filters = request.GET.dict()
-    limit = request.GET.get('limit', 25) 
+    filters = request.GET.copy()
+    limit = filters.pop('limit', 25) 
+    page = filters.pop('page', 1)  
     query = Q()
     for key, value in filters.items():
         if '__' in key:
@@ -40,20 +37,13 @@ def filter_medicines(request):
                 query &= Q(**{key: value})
         else:
             query &= Q(**{key: value})
-    medicines = Medicine.objects.filter(query)[:limit]
-    serializer = MedicineSerializer(medicines, many=True)
-    return Response(serializer.data)
 
-def filter_medicines(request):
-    class CustomPagination(PageNumberPagination):
-        page_size_query_param = 'limit'  
-    paginator = CustomPagination()
-    include_filter = request.GET.get('include', None)
-    limit = request.GET.get('limit', 25)
-    if include_filter is not None:
-        medicines = Medicine.objects.filter(your_field__in=include_filter)
-    else:
-        medicines = Medicine.objects.all()
+    medicines = Medicine.objects.filter(query)
+    paginator = PageNumberPagination()
+    paginator.page_size = limit
     result_page = paginator.paginate_queryset(medicines, request)
     serializer = MedicineSerializer(result_page, many=True)
     return paginator.get_paginated_response(serializer.data)
+
+#url example for filters 
+
